@@ -1,0 +1,241 @@
+#Q&A#
+What can you infer about the nature of these variables, as output by the info() method?
+
+- The info() method reveals whether the variables are numerical (e.g., float64 or int64), which are typically continuous and suitable for regression, or categorical (object or with few unique values), 
+which may require transformation for regression or could be used in classification models.
+
+Which variables might be suitable for regression analysis, and why? For those variables that aren't suitable for regression analysis, is there another type of statistical modeling for which they are suitable?
+
+-Suitable for Regression: Numerical variables (e.g., alcohol, fixed acidity, volatile acidity) are directly suitable for regression analysis as they can have a linear relationship with the target variable.
+-Not Suitable for Regression: Categorical variables or non-numerical data are not directly suitable for regression but can be used in classification models or transformed (e.g., one-hot encoding) for inclusion in a regression model.
+
+How does color relate to extent of correlation?
+
+- In the heatmap, color intensity indicates the strength of the correlation: darker colors (either blue or red) represent stronger correlations (positive or negative), while lighter colors represent weaker correlations.
+
+How might we use the plot to show us interesting relationships worth investigating?
+
+- The heatmap visually highlights strong correlations between variables, making it easier to identify relationships worth investigating further, such as strong positive/negative correlations that could be predictive in a regression model.
+
+More precisely, what does the heatmap show us about the fixed acidity variable's relationship to the density variable?
+
+- The heatmap shows a strong positive correlation between fixed acidity and density, suggesting that as fixed acidity increases, density tends to increase as well. This relationship may be significant and is worth exploring in regression analysis.
+
+
+#Code#
+
+import numpy as np  # For numerical operations, especially with arrays and matrices.
+import pandas as pd  # For data manipulation and analysis, especially with dataframes.
+import matplotlib.pyplot as plt  # For plotting and data visualization.
+import seaborn as sns  # For advanced data visualization; built on top of matplotlib.
+import statsmodels.api as sm  # Provides classes and functions for statistical models; we’ll use it for regression analysis.
+from statsmodels.graphics.api import abline_plot  # Used for adding a fitted line to a plot, often used in regression diagnostics.
+from sklearn.metrics import mean_squared_error, r2_score  # Functions to evaluate model performance: mean squared error and R-squared.
+from sklearn.model_selection import train_test_split  # Function to split data into training and testing sets for model evaluation.
+from sklearn import linear_model, preprocessing  # `linear_model` for linear regression models, `preprocessing` for data preprocessing like scaling.
+import warnings  # For handling and suppressing warning messages.
+
+# Don't worry about the following two instructions: they just suppress warnings that could occur later. 
+warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd")
+
+# Load the data
+file_path = r"C:\Users\jwhit\OneDrive\Documents\Data Science Course\Linear Regression\wineQualityReds.csv"
+data = pd.read_csv(file_path)
+
+# Check out its appearance
+print(data.head())
+
+# Get a good overview of the data
+data.info()
+
+# Check the dimensions of the dataset
+print(data.shape)
+
+# Making a histogram of the quality variable
+plt.figure(figsize=(8, 6))
+sns.histplot(data['quality'], bins=10, kde=False)
+plt.title('Distribution of Wine Quality')
+plt.xlabel('Quality')
+plt.ylabel('Frequency')
+plt.show()
+
+# Get a basic statistical summary of the quality variable
+quality_summary = data['quality'].describe()
+print(quality_summary)
+
+# Get a list of the values of the quality variable and the number of occurrences of each
+quality_counts = data['quality'].value_counts().sort_index()
+print(quality_counts)
+
+# Calculate the correlation matrix
+correlation_matrix = data.corr()
+
+# Display the correlation matrix
+print(correlation_matrix)
+
+# Make a pairplot of the wine data
+sns.pairplot(data)
+plt.suptitle('Pairwise Relationships in Wine Dataset', y=1.02)
+plt.show()
+
+# Make a heatmap of the correlation matrix
+plt.figure(figsize=(12, 8))
+sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='coolwarm', vmin=-1, vmax=1)
+plt.title('Correlation Heatmap of Wine Dataset')
+plt.show()
+
+# Plot density against fixed.acidity
+sns.scatterplot(x='density', y='fixed.acidity', data=data)
+plt.title('Scatter Plot of Density vs. Fixed Acidity')
+plt.xlabel('Density')
+plt.ylabel('Fixed Acidity')
+plt.show()
+
+# Call the regplot method to plot density against fixed.acidity with a regression line
+sns.regplot(x='density', y='fixed.acidity', data=data)
+plt.title('Regression Plot of Density vs. Fixed Acidity')
+plt.xlabel('Density')
+plt.ylabel('Fixed Acidity')
+plt.show()
+
+# Subsetting our data into dependent (y) and independent (X) variables
+X = data[['density']]  # Independent variable(s)
+y = data['fixed.acidity']  # Dependent variable
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+# Check the shape of the training and testing sets
+print("X_train shape:", X_train.shape)
+print("y_train shape:", y_train.shape)
+print("X_test shape:", X_test.shape)
+print("y_test shape:", y_test.shape)
+
+# Create the model
+rModel = linear_model.LinearRegression()
+
+# Train the model on the training data
+rModel.fit(X_train, y_train)
+
+# Predict on the test data
+y_pred = rModel.predict(X_test)
+
+# Evaluate the model performance
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Squared Error:", mse)
+print("R-squared:", r2)
+
+# Use the model to make predictions about our test data
+y_pred = rModel.predict(X_test)
+
+# Let's plot the predictions against the actual results
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred)
+plt.title('Predicted vs Actual Fixed Acidity')
+plt.xlabel('Actual Fixed Acidity')
+plt.ylabel('Predicted Fixed Acidity')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')  # Diagonal line for reference
+plt.show()
+
+# Create the explanatory variable X
+X = data[['density']]
+y = data['fixed.acidity']
+
+# Add a constant to the explanatory variable X
+X = sm.add_constant(X)
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+# Create the OLS model
+ols_model = sm.OLS(y_train, X_train)
+
+# Fit the model with fit()
+ols_results = ols_model.fit()
+
+# Evaluate the model with .summary()
+print(ols_results.summary())
+
+# Use the OLS model to make predictions
+y_pred_ols = ols_results.predict(X_test)
+
+# Build a scatterplot of the actual vs predicted values
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred_ols, alpha=0.7)
+plt.title('OLS Model: Predicted vs Actual Fixed Acidity')
+plt.xlabel('Actual Fixed Acidity')
+plt.ylabel('Predicted Fixed Acidity')
+
+# Add a line for perfect correlation
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+
+# Display the plot
+plt.show()
+
+# Create the explanatory variable X with all columns except 'fixed.acidity' and 'quality'
+X = data.drop(columns=['fixed.acidity', 'quality'])
+y = data['fixed.acidity']
+
+# Add a constant to the explanatory variable X
+X = sm.add_constant(X)
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+# Create the multiple linear regression model
+mlr_model = sm.OLS(y_train, X_train)
+
+# Fit the model
+mlr_results = mlr_model.fit()
+
+# Evaluate the model with .summary()
+print(mlr_results.summary())
+
+# Use the multiple linear regression model to make predictions
+y_pred_mlr = mlr_results.predict(X_test)
+
+# Build a scatterplot of the actual vs predicted values
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred_mlr, alpha=0.7)
+plt.title('Multiple Linear Regression: Predicted vs Actual Fixed Acidity')
+plt.xlabel('Actual Fixed Acidity')
+plt.ylabel('Predicted Fixed Acidity')
+
+# Add a line for perfect correlation
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+
+# Display the plot
+plt.show()
+
+# Define a function to calculate the RMSE
+def rmse(y_actual, y_pred):
+    return np.sqrt(mean_squared_error(y_actual, y_pred))
+
+# Get predictions from rModel3
+y_pred_mlr = mlr_results.predict(X_test)
+
+# Put the predictions & actual values into a dataframe
+results_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_mlr})
+print(results_df.head())
+
+# Create the explanatory variable X with the remaining six columns
+X = data.drop(columns=['fixed.acidity', 'quality', 'volatile.acidity', 'citric.acid'])
+y = data['fixed.acidity']
+
+# Add a constant to the explanatory variable X
+X = sm.add_constant(X)
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+# Create the fifth model (avoiding redundancy)
+fifth_model = sm.OLS(y_train, X_train)
+
+# Fit the model
+fifth_model_results = fifth_model.fit()
+
+# Evaluate the model with .summary()
+print(fifth_model_results.summary())
